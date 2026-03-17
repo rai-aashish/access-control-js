@@ -1,0 +1,26 @@
+{
+	// Use Biome as formatter
+	"editor.defaultFormatter": "biomejs.biome",
+
+	// Optional: format on save
+	"editor.formatOnSave": true,
+
+	// Explicit language-level bindings
+	"[typescript]": {
+		"editor.defaultFormatter": "biomejs.biome"
+	},
+	"[typescriptreact]": {
+		"editor.defaultFormatter": "biomejs.biome"
+	},
+	"[javascript]": {
+		"editor.defaultFormatter": "biomejs.biome"
+	},
+	"[javascriptreact]": {
+		"editor.defaultFormatter": "biomejs.biome"
+	},
+
+	// Let Biome handle organizing imports
+	"editor.codeActionsOnSave": {
+		"source.organizeImports": "never"
+	}
+}
