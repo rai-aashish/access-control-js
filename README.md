@@ -1,6 +1,6 @@
 # Access Control JS
 
-A lightweight, type-safe access control library for TypeScript applications. Supports both server-side (stateless) and client-side (reactive) environments.
+A lightweight, type-safe access control library for TypeScript applications. Designed to manage UI elements and actions based on a permission policy — so you can show, hide, or restrict features declaratively without scattering permission logic across your codebase. Supports both server-side (stateless) and client-side (reactive) environments.
 
 ## Installation
 
@@ -75,15 +75,15 @@ Pick **one** depending on your environment.
 
 #### Client-Side (Vanilla JS / React)
 
-Use `createAccessControl` to create a reactive store that can be updated after login.
+Use `createAccessControlStore` to create a reactive store that can be updated after login.
 
 ```typescript
 // @/lib/access-control/factory.ts
-import { createAccessControl } from 'access-control-js';
+import { createAccessControlStore } from 'access-control-js';
 import { type AppConfig } from './resources';
 import { policy } from './policy';
 
-export const authStore = createAccessControl<AppConfig>(policy);
+export const authStore = createAccessControlStore<AppConfig>(policy);
 ```
 
 **Check permissions:**
@@ -125,7 +125,7 @@ authStore.subscribe(updateUI);
 authStore.updatePolicy(newPolicy); // UI updates automatically
 ```
 
-#### `createAccessControl` Store API
+#### `createAccessControlStore` Store API
 
 | Method | Signature | Description |
 |---|---|---|
@@ -216,7 +216,7 @@ ac.can('posts', 'read');                     // uses { churchId: '123' }
 ac.can('posts', 'read', { role: 'admin' });  // uses { churchId: '123', role: 'admin' }
 
 // Client-side — set at creation
-const authStore = createAccessControl<AppConfig>(policy, { defaultContext: { churchId: '123' } });
+const authStore = createAccessControlStore<AppConfig>(policy, { defaultContext: { churchId: '123' } });
 
 // Update context alongside policy
 authStore.updatePolicy(newPolicy, { churchId: '456' });
@@ -225,8 +225,10 @@ authStore.updatePolicy(newPolicy, { churchId: '456' });
 ### Loading State (UI)
 
 ```typescript
-const store = createAccessControl([]);
+// Set initial loading state at creation
+const store = createAccessControlStore([], { initialIsLoading: true });
 
+// Or set it after creation
 store.setLoading(true);
 
 // In React
@@ -257,6 +259,7 @@ const ac = getAccessControl(policy, { conflictResolution: 'lastWins' });
 |---|---|---|---|
 | `defaultContext` | `Record<string, any>` | `undefined` | Merged into every `can()` call automatically |
 | `conflictResolution` | `'denyWins' \| 'firstWins' \| 'lastWins'` | `'denyWins'` | Strategy for resolving conflicting allow/deny rules |
+| `initialIsLoading` | `boolean` | `false` | Initial loading state for the store (only used by `createAccessControlStore`) |
 
 ---
 

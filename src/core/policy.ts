@@ -256,10 +256,10 @@ export const getAccessControl = <T extends AccessControlConfig>(
  * Ideal for client-side use where the policy may load asynchronously or change over time.
  *
  * @param initialPolicy - The initial policy to use.
- * @param options - Optional configuration options (default context, conflict resolution).
+ * @param options - Optional configuration options (default context, conflict resolution, initialIsLoading).
  * @returns An object containing policy updater, subscription method, and snapshot.
  */
-export const createAccessControl = <T extends AccessControlConfig>(
+export const createAccessControlStore = <T extends AccessControlConfig>(
     initialPolicy: TAccessControlPolicy<T>,
     // biome-ignore lint/suspicious/noExplicitAny: Context can have any value type
     optionsOrContext?: AccessControlOptions | Record<string, any>,
@@ -276,7 +276,7 @@ export const createAccessControl = <T extends AccessControlConfig>(
 
     let currentPolicy = initialPolicy;
     let currentDefaultContext = options.defaultContext;
-    let currentIsLoading = false;
+    let currentIsLoading = options.initialIsLoading ?? false;
     
     const listeners = new Set<() => void>();
 

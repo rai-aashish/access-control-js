@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from "vitest";
-import { definePolicy, getAccessControl, createAccessControl } from "../src";
+import { definePolicy, getAccessControl, createAccessControlStore } from "../src";
 
 const config = {
   posts: ["read", "create", "update", "delete"],
@@ -54,12 +54,12 @@ describe("Conflict Resolution Strategies", () => {
 
 describe("Loading State", () => {
   it("should initialize with isLoading: false by default", () => {
-    const store = createAccessControl<AppConfig>([]);
+    const store = createAccessControlStore<AppConfig>([]);
     expect(store.getSnapshot().isLoading).toBe(false);
   });
 
   it("should update isLoading via setLoading", () => {
-    const store = createAccessControl<AppConfig>([]);
+    const store = createAccessControlStore<AppConfig>([]);
     const listener = vi.fn();
     store.subscribe(listener);
 
@@ -73,7 +73,7 @@ describe("Loading State", () => {
   });
 
   it("should update isLoading via updatePolicy", () => {
-    const store = createAccessControl<AppConfig>([]);
+    const store = createAccessControlStore<AppConfig>([]);
     
     // Set loading to true
     store.setLoading(true);
@@ -85,7 +85,7 @@ describe("Loading State", () => {
   });
 
   it("should maintain isLoading state if not specified in updatePolicy", () => {
-    const store = createAccessControl<AppConfig>([]);
+    const store = createAccessControlStore<AppConfig>([]);
     store.setLoading(true);
 
     store.updatePolicy([]); // isLoading should remain true

@@ -54,7 +54,7 @@ npm run format
 Two entry points for different environments:
 
 - **`getAccessControl(policy, options?)`** — Stateless, for server-side use (API routes, Server Components). `isLoading` is always `false`.
-- **`createAccessControl(initialPolicy?, options?)`** — Reactive store with subscriptions for client-side use. Compatible with React's `useSyncExternalStore`.
+- **`createAccessControlStore(initialPolicy?, options?)`** — Reactive store with subscriptions for client-side use. Compatible with React's `useSyncExternalStore`.
 
 Both expose: `can(resource, action, context?)`, `canAll(resource, actions[], context?)`, `canAny(resource, actions[], context?)`, `canThese(checks[])`.
 
@@ -79,7 +79,7 @@ The generic `T extends AccessControlConfig` (a `Record<string, string[]>`) const
 
 ### Client-Side Store Pattern
 
-`createAccessControl()` uses a subscription + snapshot pattern. Snapshots are rebuilt only on `updatePolicy()` or `setLoading()` calls, not on reads — making `getSnapshot()` safe for `useSyncExternalStore`.
+`createAccessControlStore()` uses a subscription + snapshot pattern. Snapshots are rebuilt only on `updatePolicy()` or `setLoading()` calls, not on reads — making `getSnapshot()` safe for `useSyncExternalStore`.
 
 ### Default Context
 

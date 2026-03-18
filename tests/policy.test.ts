@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { createAccessControl, getAccessControl } from "../src";
+import { createAccessControlStore, getAccessControl } from "../src";
 
 const config = {
   posts: ["read", "create", "update", "delete"],
@@ -25,7 +25,7 @@ describe("Access Control Smoke Tests", () => {
   });
 
   it("should evaluate access correctly (client-side/store)", () => {
-    const store = createAccessControl<AppConfig>([]);
+    const store = createAccessControlStore<AppConfig>([]);
 
     expect(store.getSnapshot().can("posts", "read")).toBe(false);
 
@@ -75,7 +75,7 @@ describe("Default Context", () => {
   });
 
   it("should auto-apply default context (client-side/store)", () => {
-    const store = createAccessControl<AppConfig>(contextPolicy, {
+    const store = createAccessControlStore<AppConfig>(contextPolicy, {
       churchId: "123",
     });
 
@@ -85,7 +85,7 @@ describe("Default Context", () => {
   });
 
   it("should allow updating default context via updatePolicy", () => {
-    const store = createAccessControl<AppConfig>([], { churchId: "old" });
+    const store = createAccessControlStore<AppConfig>([], { churchId: "old" });
 
     store.updatePolicy(contextPolicy, { churchId: "123" });
 
@@ -94,7 +94,7 @@ describe("Default Context", () => {
   });
 
   it("should merge explicit context over default context", () => {
-    const store = createAccessControl<AppConfig>(contextPolicy, {
+    const store = createAccessControlStore<AppConfig>(contextPolicy, {
       churchId: "123",
     });
 

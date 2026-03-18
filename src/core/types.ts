@@ -43,6 +43,8 @@ export interface AccessControlOptions {
 	defaultContext?: Record<string, any>;
 	/** Strategy for resolving conflicting permissions. Defaults to 'denyWins'. */
 	conflictResolution?: ConflictResolutionStrategy;
+	/** Initial loading state for the store. Defaults to `false`. Only used by `createAccessControlStore`. */
+	initialIsLoading?: boolean;
 }
 
 /**
@@ -85,7 +87,7 @@ export interface CoreAccessControlType<T extends AccessControlConfig> {
 }
 
 /**
- * The store interface returned by createAccessControl.
+ * The store interface returned by createAccessControlStore.
  * Provides state management and a snapshot with all check methods.
  */
 export interface AccessControlStore<T extends AccessControlConfig> {
