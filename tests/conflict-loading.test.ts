@@ -58,6 +58,16 @@ describe("Loading State", () => {
     expect(store.getSnapshot().isLoading).toBe(false);
   });
 
+  it("should initialize with isLoading: true when initialIsLoading is set", () => {
+    const store = createAccessControlStore<AppConfig>([], { initialIsLoading: true });
+    expect(store.getSnapshot().isLoading).toBe(true);
+  });
+
+  it("should initialize with isLoading: false when initialIsLoading is explicitly false", () => {
+    const store = createAccessControlStore<AppConfig>([], { initialIsLoading: false });
+    expect(store.getSnapshot().isLoading).toBe(false);
+  });
+
   it("should update isLoading via setLoading", () => {
     const store = createAccessControlStore<AppConfig>([]);
     const listener = vi.fn();

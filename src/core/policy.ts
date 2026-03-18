@@ -267,7 +267,11 @@ export const createAccessControlStore = <T extends AccessControlConfig>(
      // Backward compatibility handling
     let options: AccessControlOptions = {};
     if (optionsOrContext) {
-        if ("conflictResolution" in optionsOrContext || "defaultContext" in optionsOrContext) {
+        if (
+            "conflictResolution" in optionsOrContext ||
+            "defaultContext" in optionsOrContext ||
+            "initialIsLoading" in optionsOrContext
+        ) {
             options = optionsOrContext as AccessControlOptions;
         } else {
             options = { defaultContext: optionsOrContext };
