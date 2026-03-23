@@ -45,6 +45,10 @@ export interface AccessControlOptions {
 	conflictResolution?: ConflictResolutionStrategy;
 	/** Initial loading state for the store. Defaults to `false`. Only used by `createAccessControlStore`. */
 	initialIsLoading?: boolean;
+	/** Cache `can()` evaluation results within each snapshot. Cached results are discarded automatically
+	 *  when the policy changes via `updatePolicy()` or `setLoading()`. Only applies to
+	 *  `createAccessControlStore`. Defaults to `true`. */
+	cache?: boolean;
 }
 
 /**

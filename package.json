@@ -1,6 +1,6 @@
 {
   "name": "access-control-js",
-  "version": "0.2.1",
+  "version": "0.3.0",
   "description": "A lightweight, type-safe access control library for TypeScript applications.",
   "main": "./dist/index.js",
   "module": "./dist/index.mjs",

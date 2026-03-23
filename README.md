@@ -239,6 +239,22 @@ if (isLoading) return <Spinner />;
 store.updatePolicy(newPolicy, undefined, { isLoading: false });
 ```
 
+### Result Caching
+
+`createAccessControlStore` caches `can()` results by default. When multiple components call the same check (e.g. `can('posts', 'edit')`) during the same render cycle, the result is served from an in-memory cache instead of re-evaluating the policy each time.
+
+The cache is scoped to the current snapshot — it is discarded automatically whenever `updatePolicy()` or `setLoading()` is called, so results are always consistent with the active policy.
+
+```typescript
+// Caching is on by default — no config needed
+const authStore = createAccessControlStore<AppConfig>(policy);
+
+// Explicitly disable if you need fresh evaluation on every call
+const authStore = createAccessControlStore<AppConfig>(policy, { cache: false });
+```
+
+> **Note:** Caching only applies to `createAccessControlStore`. `getAccessControl` is stateless and does not cache.
+
 ### Conflict Resolution
 
 By default, any deny rule at the highest specificity blocks access (`denyWins`). You can change this:
@@ -260,6 +276,7 @@ const ac = getAccessControl(policy, { conflictResolution: 'lastWins' });
 | `defaultContext` | `Record<string, any>` | `undefined` | Merged into every `can()` call automatically |
 | `conflictResolution` | `'denyWins' \| 'firstWins' \| 'lastWins'` | `'denyWins'` | Strategy for resolving conflicting allow/deny rules |
 | `initialIsLoading` | `boolean` | `false` | Initial loading state for the store (only used by `createAccessControlStore`) |
+| `cache` | `boolean` | `true` | Cache `can()` results within each snapshot; auto-invalidated on `updatePolicy()`/`setLoading()` (only used by `createAccessControlStore`) |
 
 ---
 

@@ -270,7 +270,8 @@ export const createAccessControlStore = <T extends AccessControlConfig>(
         if (
             "conflictResolution" in optionsOrContext ||
             "defaultContext" in optionsOrContext ||
-            "initialIsLoading" in optionsOrContext
+            "initialIsLoading" in optionsOrContext ||
+            "cache" in optionsOrContext
         ) {
             options = optionsOrContext as AccessControlOptions;
         } else {
@@ -283,6 +284,17 @@ export const createAccessControlStore = <T extends AccessControlConfig>(
     let currentIsLoading = options.initialIsLoading ?? false;
     
     const listeners = new Set<() => void>();
+
+    // Stable JSON serialization of a context object or array — sorts keys so that
+    // {role:"admin",id:1} and {id:1,role:"admin"} produce the same string.
+    // biome-ignore lint/suspicious/noExplicitAny: Context can have any value type
+    const stableStringify = (ctx: Record<string, any> | Record<string, any>[] | undefined): string => {
+        if (!ctx) return "";
+        // biome-ignore lint/suspicious/noExplicitAny: Context can have any value type
+        const sortObj = (o: Record<string, any>) =>
+            JSON.stringify(Object.fromEntries(Object.keys(o).sort().map((k) => [k, o[k]])));
+        return Array.isArray(ctx) ? `[${ctx.map(sortObj).sort().join(",")}]` : sortObj(ctx);
+    };
 
     // Build a snapshot with all check methods bound to a specific policy.
     // Cached and only rebuilt on updatePolicy/setLoading calls.
@@ -300,12 +312,21 @@ export const createAccessControlStore = <T extends AccessControlConfig>(
         ): Record<T[R][number], boolean> =>
             evaluateAccessBulk(policy, resource, actions, mergeContext(defCtx, context), options);
 
+        const resultCache = options.cache !== false ? new Map<string, boolean>() : null;
+
         const snapshotCan = <R extends keyof T>(
             resource: R,
             action: T[R][number],
             // biome-ignore lint/suspicious/noExplicitAny: Context can have any value type
             context?: Record<string, any> | Record<string, any>[],
-        ): boolean => snapshotCanThese(resource, [action], context)[action];
+        ): boolean => {
+            if (!resultCache) return snapshotCanThese(resource, [action], context)[action];
+            const key = `${String(resource)}:${String(action)}:${stableStringify(context)}`;
+            if (resultCache.has(key)) return resultCache.get(key)!;
+            const result = snapshotCanThese(resource, [action], context)[action];
+            resultCache.set(key, result);
+            return result;
+        };
 
         return {
             policy,
