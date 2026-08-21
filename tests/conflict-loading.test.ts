@@ -1,104 +1,220 @@
-import { describe, it, expect, vi } from "vitest";
-import { definePolicy, getAccessControl, createAccessControlStore } from "../src";
+import { describe, expect, it, vi } from "vitest";
+import {
+	createAccessControlStore,
+	definePolicy,
+	getAccessControl,
+	mergePolicies,
+} from "../src";
 
 const config = {
-  posts: ["read", "create", "update", "delete"],
-  comments: ["create", "delete"],
+	posts: ["read", "create", "update", "delete"],
+	comments: ["create", "delete"],
 } as const;
 
 type AppConfig = typeof config;
 
 describe("Conflict Resolution Strategies", () => {
-  // Policy with conflicting rules:
-  // 1. Allow read
-  // 2. Deny read
-  const conflictingPolicy = definePolicy<AppConfig>()
-    .allow("posts", ["read"])
-    .deny("posts", ["read"])
-    .build();
+	// Policy with conflicting rules:
+	// 1. Allow read
+	// 2. Deny read
+	const conflictingPolicy = definePolicy<AppConfig>()
+		.allow("posts", ["read"])
+		.deny("posts", ["read"])
+		.build();
 
-  it("should default to denyWins", () => {
-    const { can } = getAccessControl(conflictingPolicy);
-    expect(can("posts", "read")).toBe(false);
-  });
+	it("should default to denyWins", () => {
+		const { can } = getAccessControl(conflictingPolicy);
+		expect(can("posts", "read")).toBe(false);
+	});
 
-  it("should support denyWins explicit strategy", () => {
-    const { can } = getAccessControl(conflictingPolicy, { conflictResolution: "denyWins" });
-    expect(can("posts", "read")).toBe(false);
-  });
+	it("should support denyWins explicit strategy", () => {
+		const { can } = getAccessControl(conflictingPolicy, {
+			conflictResolution: "denyWins",
+		});
+		expect(can("posts", "read")).toBe(false);
+	});
 
-  it("should support firstWins strategy", () => {
-    // First rule is ALLOW
-    const { can } = getAccessControl(conflictingPolicy, { conflictResolution: "firstWins" });
-    expect(can("posts", "read")).toBe(true);
-  });
+	it("should support firstWins strategy", () => {
+		// First rule is ALLOW
+		const { can } = getAccessControl(conflictingPolicy, {
+			conflictResolution: "firstWins",
+		});
+		expect(can("posts", "read")).toBe(true);
+	});
 
-  it("should support lastWins strategy", () => {
-    // Last rule is DENY
-    const { can } = getAccessControl(conflictingPolicy, { conflictResolution: "lastWins" });
-    expect(can("posts", "read")).toBe(false);
-  });
+	it("should support lastWins strategy", () => {
+		// Last rule is DENY
+		const { can } = getAccessControl(conflictingPolicy, {
+			conflictResolution: "lastWins",
+		});
+		expect(can("posts", "read")).toBe(false);
+	});
 
-  it("should verify lastWins with reverse order", () => {
-    // 1. Deny read
-    // 2. Allow read
-    const reversePolicy = definePolicy<AppConfig>()
-      .deny("posts", ["read"])
-      .allow("posts", ["read"])
-      .build();
+	it("should verify lastWins with reverse order", () => {
+		// 1. Deny read
+		// 2. Allow read
+		const reversePolicy = definePolicy<AppConfig>()
+			.deny("posts", ["read"])
+			.allow("posts", ["read"])
+			.build();
 
-    const { can } = getAccessControl(reversePolicy, { conflictResolution: "lastWins" });
-    expect(can("posts", "read")).toBe(true);
-  });
+		const { can } = getAccessControl(reversePolicy, {
+			conflictResolution: "lastWins",
+		});
+		expect(can("posts", "read")).toBe(true);
+	});
 });
 
 describe("Loading State", () => {
-  it("should initialize with isLoading: false by default", () => {
-    const store = createAccessControlStore<AppConfig>([]);
-    expect(store.getSnapshot().isLoading).toBe(false);
-  });
+	it("should initialize with isLoading: false by default", () => {
+		const store = createAccessControlStore<AppConfig>([]);
+		expect(store.getSnapshot().isLoading).toBe(false);
+	});
 
-  it("should initialize with isLoading: true when initialIsLoading is set", () => {
-    const store = createAccessControlStore<AppConfig>([], { initialIsLoading: true });
-    expect(store.getSnapshot().isLoading).toBe(true);
-  });
+	it("should initialize with isLoading: true when initialIsLoading is set", () => {
+		const store = createAccessControlStore<AppConfig>([], {
+			initialIsLoading: true,
+		});
+		expect(store.getSnapshot().isLoading).toBe(true);
+	});
 
-  it("should initialize with isLoading: false when initialIsLoading is explicitly false", () => {
-    const store = createAccessControlStore<AppConfig>([], { initialIsLoading: false });
-    expect(store.getSnapshot().isLoading).toBe(false);
-  });
+	it("should initialize with isLoading: false when initialIsLoading is explicitly false", () => {
+		const store = createAccessControlStore<AppConfig>([], {
+			initialIsLoading: false,
+		});
+		expect(store.getSnapshot().isLoading).toBe(false);
+	});
 
-  it("should update isLoading via setLoading", () => {
-    const store = createAccessControlStore<AppConfig>([]);
-    const listener = vi.fn();
-    store.subscribe(listener);
+	it("should update isLoading via setLoading", () => {
+		const store = createAccessControlStore<AppConfig>([]);
+		const listener = vi.fn();
+		store.subscribe(listener);
 
-    store.setLoading(true);
-    
-    expect(store.getSnapshot().isLoading).toBe(true);
-    expect(listener).toHaveBeenCalledTimes(1);
-    store.setLoading(false);
-    expect(store.getSnapshot().isLoading).toBe(false);
-    expect(listener).toHaveBeenCalledTimes(2);
-  });
+		store.setLoading(true);
 
-  it("should update isLoading via updatePolicy", () => {
-    const store = createAccessControlStore<AppConfig>([]);
-    
-    // Set loading to true
-    store.setLoading(true);
-    expect(store.getSnapshot().isLoading).toBe(true);
+		expect(store.getSnapshot().isLoading).toBe(true);
+		expect(listener).toHaveBeenCalledTimes(1);
+		store.setLoading(false);
+		expect(store.getSnapshot().isLoading).toBe(false);
+		expect(listener).toHaveBeenCalledTimes(2);
+	});
 
-    // Update policy and turn off loading
-    store.updatePolicy([], undefined, { isLoading: false });
-    expect(store.getSnapshot().isLoading).toBe(false);
-  });
+	it("should update isLoading via updatePolicy", () => {
+		const store = createAccessControlStore<AppConfig>([]);
 
-  it("should maintain isLoading state if not specified in updatePolicy", () => {
-    const store = createAccessControlStore<AppConfig>([]);
-    store.setLoading(true);
+		// Set loading to true
+		store.setLoading(true);
+		expect(store.getSnapshot().isLoading).toBe(true);
 
-    store.updatePolicy([]); // isLoading should remain true
-    expect(store.getSnapshot().isLoading).toBe(true);
-  });
+		// Update policy and turn off loading
+		store.updatePolicy([], undefined, { isLoading: false });
+		expect(store.getSnapshot().isLoading).toBe(false);
+	});
+
+	it("should maintain isLoading state if not specified in updatePolicy", () => {
+		const store = createAccessControlStore<AppConfig>([]);
+		store.setLoading(true);
+
+		store.updatePolicy([]); // isLoading should remain true
+		expect(store.getSnapshot().isLoading).toBe(true);
+	});
+});
+
+describe("Statement order under grouping", () => {
+	it("keeps per-resource order, which firstWins and lastWins depend on", () => {
+		// Resources are interleaved, so grouping by resource has to preserve the order
+		// of the two posts statements relative to each other
+		const policy = [
+			{ resource: "posts", actions: ["read"], effect: "allow" },
+			{ resource: "comments", actions: ["create"], effect: "deny" },
+			{ resource: "posts", actions: ["read"], effect: "deny" },
+		] as const;
+
+		expect(
+			getAccessControl<AppConfig>(policy, {
+				conflictResolution: "firstWins",
+			}).can("posts", "read"),
+		).toBe(true);
+
+		expect(
+			getAccessControl<AppConfig>(policy, {
+				conflictResolution: "lastWins",
+			}).can("posts", "read"),
+		).toBe(false);
+	});
+});
+
+describe("Specificity and explicit deny", () => {
+	// A broad kill switch, with one specific contextual allow under it
+	const killSwitch = definePolicy<AppConfig>()
+		.deny("posts", ["*"])
+		.allow("posts", ["delete"], { contexts: [{ role: "editor" }] })
+		.build();
+
+	it("denyWins lets a specific allow beat a broad deny", () => {
+		const { can } = getAccessControl<AppConfig>(killSwitch);
+
+		expect(can("posts", "delete", { role: "editor" })).toBe(true);
+		expect(can("posts", "read", { role: "editor" })).toBe(false);
+	});
+
+	it("lets a more specific allow act as an exception to a deny", () => {
+		// The capability specificity buys you: block a class of thing, then carve out a
+		// qualified exception. Not expressible under explicitDenyWins.
+		const policy = definePolicy<AppConfig>()
+			.allow("posts", ["read"], { contexts: [{ tenant: "acme" }] })
+			.deny("posts", ["read"], { contexts: [{ classification: "restricted" }] })
+			.allow("posts", ["read"], {
+				contexts: [{ classification: "restricted", role: "compliance" }],
+			})
+			.build();
+		const { can } = getAccessControl<AppConfig>(policy);
+
+		expect(can("posts", "read", { tenant: "acme" })).toBe(true);
+		expect(
+			can("posts", "read", { tenant: "acme", classification: "restricted" }),
+		).toBe(false);
+		// Two keys beat the one-key deny
+		expect(
+			can("posts", "read", {
+				tenant: "acme",
+				classification: "restricted",
+				role: "compliance",
+			}),
+		).toBe(true);
+	});
+
+	it("lastWins is what makes mergePolicies override rather than only restrict", () => {
+		const base = definePolicy<AppConfig>().deny("posts", ["read"]).build();
+		const override = definePolicy<AppConfig>().allow("posts", ["read"]).build();
+		const merged = mergePolicies<AppConfig>(base, override);
+
+		expect(
+			getAccessControl<AppConfig>(merged, {
+				conflictResolution: "lastWins",
+			}).can("posts", "read"),
+		).toBe(true);
+		expect(
+			getAccessControl<AppConfig>(merged, {
+				conflictResolution: "firstWins",
+			}).can("posts", "read"),
+		).toBe(false);
+	});
+
+	it("explicitDenyWins makes the broad deny an actual kill switch", () => {
+		const { can } = getAccessControl<AppConfig>(killSwitch, {
+			conflictResolution: "explicitDenyWins",
+		});
+
+		expect(can("posts", "delete", { role: "editor" })).toBe(false);
+	});
+
+	it("explicitDenyWins still grants when nothing denies", () => {
+		const policy = definePolicy<AppConfig>().allow("posts", ["read"]).build();
+		const { can } = getAccessControl<AppConfig>(policy, {
+			conflictResolution: "explicitDenyWins",
+		});
+
+		expect(can("posts", "read")).toBe(true);
+	});
 });

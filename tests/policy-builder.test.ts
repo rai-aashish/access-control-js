@@ -1,102 +1,120 @@
-import { describe, it, expect } from "vitest";
-import { definePolicy, mergePolicies, getAccessControl } from "../src";
+import { describe, expect, it } from "vitest";
+import type { TAccessControlPolicy } from "../src";
+import { definePolicy, getAccessControl, mergePolicies } from "../src";
 
 const config = {
-  posts: ["read", "create", "update", "delete"],
-  comments: ["create", "delete"],
-  admin: ["manage_users"],
+	posts: ["read", "create", "update", "delete"],
+	comments: ["create", "delete"],
+	admin: ["manage_users"],
 } as const;
 
 type AppConfig = typeof config;
 
 describe("Policy Builder", () => {
-  it("should build a simple allow policy", () => {
-    const policy = definePolicy<AppConfig>()
-      .allow("posts", ["read", "create"])
-      .build();
+	it("should build a simple allow policy", () => {
+		const policy = definePolicy<AppConfig>()
+			.allow("posts", ["read", "create"])
+			.build();
 
-    expect(policy).toHaveLength(1);
-    expect(policy[0]).toEqual({
-      resource: "posts",
-      actions: ["read", "create"],
-      effect: "allow",
-      contexts: undefined,
-    });
-  });
+		expect(policy).toHaveLength(1);
+		expect(policy[0]).toEqual({
+			resource: "posts",
+			actions: ["read", "create"],
+			effect: "allow",
+			contexts: undefined,
+		});
+	});
 
-  it("should chain allow and deny statements", () => {
-    const policy = definePolicy<AppConfig>()
-      .allow("posts", ["read"])
-      .deny("posts", ["delete"])
-      .build();
+	it("should chain allow and deny statements", () => {
+		const policy = definePolicy<AppConfig>()
+			.allow("posts", ["read"])
+			.deny("posts", ["delete"])
+			.build();
 
-    expect(policy).toHaveLength(2);
-    expect(policy[0].effect).toBe("allow");
-    expect(policy[1].effect).toBe("deny");
-  });
+		expect(policy).toHaveLength(2);
+		expect(policy[0]?.effect).toBe("allow");
+		expect(policy[1]?.effect).toBe("deny");
+	});
 
-  it("should handle wildcard actions", () => {
-    const policy = definePolicy<AppConfig>()
-      .allow("comments", ["*"])
-      .build();
+	it("should handle wildcard actions", () => {
+		const policy = definePolicy<AppConfig>().allow("comments", ["*"]).build();
 
-    expect(policy[0].actions).toEqual(["*"]);
-  });
+		expect(policy[0]?.actions).toEqual(["*"]);
+	});
 
-  it("should include contexts when provided", () => {
-    const policy = definePolicy<AppConfig>()
-      .allow("admin", ["manage_users"], { contexts: [{ role: "superadmin" }] })
-      .build();
+	it("should include contexts when provided", () => {
+		const policy = definePolicy<AppConfig>()
+			.allow("admin", ["manage_users"], { contexts: [{ role: "superadmin" }] })
+			.build();
 
-    expect(policy[0].contexts).toEqual([{ role: "superadmin" }]);
-  });
+		expect(policy[0]?.contexts).toEqual([{ role: "superadmin" }]);
+	});
 
-  it("should work with getAccessControl", () => {
-    const policy = definePolicy<AppConfig>()
-      .allow("posts", ["read"])
-      .deny("posts", ["delete"])
-      .build();
+	it("should work with getAccessControl", () => {
+		const policy = definePolicy<AppConfig>()
+			.allow("posts", ["read"])
+			.deny("posts", ["delete"])
+			.build();
 
-    const { can } = getAccessControl(policy,{contexts:[{role:"admin"}]});
+		const { can } = getAccessControl(policy);
 
-    expect(can("posts", "read")).toBe(true);
-    expect(can("posts", "delete")).toBe(false);
-
-
-  });
+		expect(can("posts", "read")).toBe(true);
+		expect(can("posts", "delete")).toBe(false);
+	});
 });
 
 describe("mergePolicies", () => {
-  it("should merge two policy arrays", () => {
-    const policy1 = definePolicy<AppConfig>().allow("posts", ["read"]).build();
-    const policy2 = definePolicy<AppConfig>().allow("comments", ["create"]).build();
+	it("should merge two policy arrays", () => {
+		const policy1 = definePolicy<AppConfig>().allow("posts", ["read"]).build();
+		const policy2 = definePolicy<AppConfig>()
+			.allow("comments", ["create"])
+			.build();
 
-    const merged = mergePolicies(policy1, policy2);
+		const merged = mergePolicies(policy1, policy2);
 
-    expect(merged).toHaveLength(2);
-    expect(merged[0].resource).toBe("posts");
-    expect(merged[1].resource).toBe("comments");
-  });
+		expect(merged).toHaveLength(2);
+		expect(merged[0]?.resource).toBe("posts");
+		expect(merged[1]?.resource).toBe("comments");
+	});
 
-  it("should flatten nested arrays correctly", () => {
-    const p1 = [{ resource: "a", actions: [], effect: "allow" }] as any;
-    const p2 = [{ resource: "b", actions: [], effect: "allow" }] as any;
-    
-    const merged = mergePolicies(p1, p2);
-    expect(merged).toHaveLength(2);
-  });
+	it("rejects an empty string as an action", () => {
+		const builder = definePolicy<AppConfig>();
 
-  it("should be compatible with getAccessControl after merging", () => {
-    const basePolicy = definePolicy<AppConfig>().allow("posts", ["read"]).build();
-    const adminPolicy = definePolicy<AppConfig>().allow("posts", ["delete"]).build();
+		// @ts-expect-error — "" was removed from the action union in 0.4.0
+		builder.allow("posts", [""]);
+	});
 
-    // Merging: adminPolicy comes later, but order doesn't strictly matter for distinct permissions.
-    // For conflicting permissions, specificity rules apply.
-    const merged = mergePolicies(basePolicy, adminPolicy);
+	it("should flatten nested arrays correctly", () => {
+		// A config of its own, so the statements are typed rather than cast through any
+		const flattenConfig = { a: ["read"], b: ["read"] } as const;
+		type FlattenConfig = typeof flattenConfig;
 
-    const { can } = getAccessControl(merged);
+		const p1: TAccessControlPolicy<FlattenConfig> = [
+			{ resource: "a", actions: [], effect: "allow" },
+		];
+		const p2: TAccessControlPolicy<FlattenConfig> = [
+			{ resource: "b", actions: [], effect: "allow" },
+		];
 
-    expect(can("posts", "read")).toBe(true);
-    expect(can("posts", "delete")).toBe(true);
-  });
+		const merged = mergePolicies<FlattenConfig>(p1, p2);
+		expect(merged).toHaveLength(2);
+	});
+
+	it("should be compatible with getAccessControl after merging", () => {
+		const basePolicy = definePolicy<AppConfig>()
+			.allow("posts", ["read"])
+			.build();
+		const adminPolicy = definePolicy<AppConfig>()
+			.allow("posts", ["delete"])
+			.build();
+
+		// Merging: adminPolicy comes later, but order doesn't strictly matter for distinct permissions.
+		// For conflicting permissions, specificity rules apply.
+		const merged = mergePolicies(basePolicy, adminPolicy);
+
+		const { can } = getAccessControl(merged);
+
+		expect(can("posts", "read")).toBe(true);
+		expect(can("posts", "delete")).toBe(true);
+	});
 });

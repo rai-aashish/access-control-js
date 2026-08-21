@@ -1,5 +1,6 @@
 import type {
 	AccessControlConfig,
+	Condition,
 	TAccessControlPolicy,
 } from "./types";
 
@@ -18,9 +19,8 @@ export class PolicyBuilder<T extends AccessControlConfig> {
 	 */
 	allow<R extends keyof T>(
 		resource: R,
-		actions: readonly (T[R][number] | "*" | "")[],
-		// biome-ignore lint/suspicious/noExplicitAny: Context can have any value type
-		options?: { contexts?: readonly Record<string, any>[] },
+		actions: readonly (T[R][number] | "*")[],
+		options?: { contexts?: readonly Condition[] },
 	): this {
 		this.statements = [
 			...this.statements,
@@ -42,9 +42,8 @@ export class PolicyBuilder<T extends AccessControlConfig> {
 	 */
 	deny<R extends keyof T>(
 		resource: R,
-		actions: readonly (T[R][number] | "*" | "")[],
-		// biome-ignore lint/suspicious/noExplicitAny: Context can have any value type
-		options?: { contexts?: readonly Record<string, any>[] },
+		actions: readonly (T[R][number] | "*")[],
+		options?: { contexts?: readonly Condition[] },
 	): this {
 		this.statements = [
 			...this.statements,
@@ -71,7 +70,9 @@ export class PolicyBuilder<T extends AccessControlConfig> {
  * Helper to start building a policy using the fluent API.
  * @returns A new PolicyBuilder instance.
  */
-export const definePolicy = <T extends AccessControlConfig>(): PolicyBuilder<T> => {
+export const definePolicy = <
+	T extends AccessControlConfig,
+>(): PolicyBuilder<T> => {
 	return new PolicyBuilder<T>();
 };
 
